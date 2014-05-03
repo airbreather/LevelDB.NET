@@ -70,10 +70,9 @@ namespace LevelDBClr
 
 	void Database::Delete(array<uint8_t>^ key)
 	{
-		List<char>^ keyList = gcnew List<char>();
-		for each(char keyByte in key)
+		if (key == nullptr)
 		{
-			keyList->Add(keyByte);
+			throw gcnew ArgumentNullException("key");
 		}
 
 		pin_ptr<uint8_t> pinnedKeyPtr = &key[0];
@@ -87,6 +86,16 @@ namespace LevelDBClr
 
 	Database::Database(String^ path, DatabaseOptions^ options)
 	{
+		if (String::IsNullOrWhiteSpace(path))
+		{
+			throw gcnew ArgumentException("Path must be provided", "path");
+		}
+
+		if (options == nullptr)
+		{
+			options = gcnew DatabaseOptions();
+		}
+
 		string marshaledPath = marshal_as<string>(path);
 
 		DB* dbPtr;
