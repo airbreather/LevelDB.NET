@@ -1,31 +1,29 @@
 #pragma once
 #include <stdint.h>
 #include "leveldb/db.h"
-
-using namespace leveldb;
-using namespace System;
-using namespace System::Collections::Generic;
+#include "DatabaseOptions.h"
 
 namespace LevelDBClr
 {
-	public interface class IDatabase
+	public interface class IDatabase : System::IDisposable
 	{
-	public:
-		array<uint8_t>^ Get(IEnumerable<uint8_t>^ key);
-		void Put(IEnumerable<uint8_t>^ key, IEnumerable<uint8_t>^ value);
+		public:
+			array<uint8_t>^ Get(array<uint8_t>^ key);
+			void Put(array<uint8_t>^ key, array<uint8_t>^ value);
+			void Delete(array<uint8_t>^ key);
 	};
 
-
-	public ref class Database : IDatabase, IDisposable
+	ref class Database : IDatabase
 	{
-		DB* db;
+		leveldb::DB* db;
 
-	public:
-		virtual array<uint8_t>^ Get(IEnumerable<uint8_t>^ key);
-		virtual void Put(IEnumerable<uint8_t>^ key, IEnumerable<uint8_t>^ value);
+		public:
+			virtual array<uint8_t>^ Get(array<uint8_t>^ key);
+			virtual void Put(array<uint8_t>^ key, array<uint8_t>^ value);
+			virtual void Delete(array<uint8_t>^ key);
 
-	internal:
-		Database(const char* path);
-		~Database();
+		internal:
+			Database(System::String^ path, DatabaseOptions^ options);
+			~Database();
 	};
 };

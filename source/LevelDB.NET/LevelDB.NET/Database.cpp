@@ -1,77 +1,109 @@
 #pragma once
+#include <msclr\marshal_cppstd.h>
 #include "IDatabase.h"
+#include "DatabaseOptions.h"
 #include "leveldb/db.h"
-#include "leveldb/db/db_impl.h"
 
-using namespace leveldb;
-using namespace LevelDBClr;
+using namespace std;
 using namespace System;
+using namespace System::Collections::Generic;
+using namespace msclr::interop;
+using namespace leveldb;
 
-array<uint8_t>^ Database::Get(IEnumerable<uint8_t>^ key)
+namespace LevelDBClr
 {
-	List<char>^ keyList = gcnew List<char>();
-	for each(char keyByte in key)
+	array<uint8_t>^ Database::Get(array<uint8_t>^ key)
 	{
-		keyList->Add(keyByte);
+		if (key == nullptr)
+		{
+			throw gcnew ArgumentNullException("key");
+		}
+
+		pin_ptr<uint8_t> pinnedKeyPtr = &key[0];
+		const char* keyPtr = (const char*)pinnedKeyPtr;
+
+		Slice keySlice(keyPtr, key->Length);
+
+		ReadOptions options;
+		string v;
+
+		Status status = this->db->Get(options, keySlice, &v);
+		if (status.IsNotFound())
+		{
+			return nullptr;
+		}
+
+		List<uint8_t>^ valueList = gcnew List<uint8_t>();
+		for (uint8_t b : v)
+		{
+			valueList->Add(b);
+		}
+
+		return valueList->ToArray();
 	}
 
-	array<char>^ keyarr = keyList->ToArray();
-	pin_ptr<char> keyHeadd = &keyarr[0];
-	const char* keyHead = keyHeadd;
-
-	Slice keySlice(keyHead, keyarr->Length);
-
-	ReadOptions options;
-	std::string* v;
-
-	this->db->Get(options, keySlice, v);
-
-	List<uint8_t>^ valueList = gcnew List<uint8_t>();
-	for (uint8_t b: *v)
+	void Database::Put(array<uint8_t>^ key, array<uint8_t>^ value)
 	{
-		valueList->Add(b);
+		if (key == nullptr)
+		{
+			throw gcnew ArgumentNullException("key");
+		}
+
+		if (value == nullptr)
+		{
+			throw gcnew ArgumentNullException("value");
+		}
+
+		pin_ptr<uint8_t> pinnedKeyPtr = &key[0];
+		const char* keyPtr = (const char*)pinnedKeyPtr;
+
+		Slice keySlice(keyPtr, key->Length);
+
+		pin_ptr<uint8_t> pinnedValuePtr = &value[0];
+		const char* valuePtr = (const char*)pinnedValuePtr;
+
+		Slice valueSlice(valuePtr, value->Length);
+
+		WriteOptions options;
+		this->db->Put(options, keySlice, valueSlice);
 	}
 
-	return valueList->ToArray();
-}
-
-void Database::Put(IEnumerable<uint8_t>^ key, IEnumerable<uint8_t>^ value)
-{
-	List<char>^ keyList = gcnew List<char>();
-	for each(char keyByte in key)
+	void Database::Delete(array<uint8_t>^ key)
 	{
-		keyList->Add(keyByte);
+		List<char>^ keyList = gcnew List<char>();
+		for each(char keyByte in key)
+		{
+			keyList->Add(keyByte);
+		}
+
+		pin_ptr<uint8_t> pinnedKeyPtr = &key[0];
+		const char* keyPtr = (const char*)pinnedKeyPtr;
+
+		Slice keySlice(keyPtr, key->Length);
+
+		WriteOptions options;
+		this->db->Delete(options, keySlice);
 	}
 
-	array<char>^ keyarr = keyList->ToArray();
-	pin_ptr<char> keyHeadd = &keyarr[0];
-	const char* keyHead = keyHeadd;
-
-	Slice keySlice(keyHead, keyarr->Length);
-
-	List<char>^ valueList = gcnew List<char>();
-	for each(char valueByte in value)
+	Database::Database(String^ path, DatabaseOptions^ options)
 	{
-		valueList->Add(valueByte);
+		string marshaledPath = marshal_as<string>(path);
+
+		DB* dbPtr;
+		Status status = DB::Open(options->GetUnderlyingOptions(), marshaledPath, &dbPtr);
+		if (status.ok())
+		{
+			this->db = dbPtr;
+		}
+		else
+		{
+			String^ marshaledStatusMessage = marshal_as<String^>(status.ToString());
+			throw gcnew InvalidOperationException(marshaledStatusMessage);
+		}
 	}
 
-	array<char>^ valuearr = valueList->ToArray();
-	pin_ptr<char> valueHeadd = &valuearr[0];
-	const char* valueHead = valueHeadd;
-
-	Slice valueSlice(valueHead, valuearr->Length);
-
-	WriteOptions options;
-	this->db->Put(options, keySlice, valueSlice);
-}
-
-Database::Database(const char* path)
-{
-	const Options options;
-	this->db = new DBImpl(options, path);
-}
-
-Database::~Database()
-{
-	delete this->db;
-}
+	Database::~Database()
+	{
+		delete this->db;
+	}
+};

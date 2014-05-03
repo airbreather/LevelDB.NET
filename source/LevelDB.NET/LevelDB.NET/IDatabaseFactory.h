@@ -1,15 +1,18 @@
 #pragma once
-
 #include "IDatabase.h"
-
-using namespace std;
-using namespace System;
+#include "DatabaseOptions.h"
 
 namespace LevelDBClr
 {
 	public interface class IDatabaseFactory
 	{
 		public:
-			IDatabase^ CreateDatabase(const char* path);
+			IDatabase^ CreateDatabase(System::String^ path, DatabaseOptions^ options);
+	};
+
+	public ref class DatabaseFactory : IDatabaseFactory
+	{
+		public:
+			virtual IDatabase^ CreateDatabase(System::String^ path, DatabaseOptions^ options);
 	};
 };
