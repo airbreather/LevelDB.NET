@@ -19,6 +19,7 @@ namespace LevelDBClr
 			~DatabaseOptions();
 			void SetCreateIfMissing(bool createIfMissing);
 			void SetCompressionOption(CompressionOption compressionOption);
+			void SetCacheSizeInBytes(size_t cacheSizeInBytes);
 
 		internal:
 			const leveldb::Options& GetUnderlyingOptions();
